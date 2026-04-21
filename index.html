@@ -115,7 +115,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       </div>
       <div class="grid-2" style="margin-bottom:8px;">
         <div class="field"><label>Client</label><div class="field-row"><input type="text" id="client" placeholder="Client name" oninput="saveData()"><button class="mic-btn" onclick="startVoice('client',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
-        <div class="field"><label>Contractor</label><div class="field-row"><input type="text" id="contractor" placeholder="Contractor name" oninput="saveData()"><button class="mic-btn" onclick="startVoice('contractor',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+        <div class="field"><label>Contractor</label><div class="field-row"><input type="text" id="contractor" placeholder="Contractor name" oninput="syncContractorName();saveData();"><button class="mic-btn" onclick="startVoice('contractor',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
       </div>
       <div class="field"><label>Project Manager</label><div class="field-row"><input type="text" id="pm" placeholder="Project manager name" oninput="saveData()"><button class="mic-btn" onclick="startVoice('pm',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
     </div>
@@ -422,7 +422,7 @@ function initFF(keepFirst) {
   // First row — prime contractor
   const r1=makeFFRow();
   const c1=[...r1.querySelectorAll('input,select')];
-  c1[0].value = firstName || 'Contractor Name';
+  c1[0].value = firstName || document.getElementById('contractor')?.value || '';
   c1[1].value = firstSel || 'Prime';
   // set the select option
   [...c1[1].options].forEach(o=>{ o.selected = (o.value===(firstSel||'Prime')); });
@@ -432,6 +432,16 @@ function initFF(keepFirst) {
   // Second row blank
   b.appendChild(makeFFRow());
 }
+function syncContractorName() {
+  var name = document.getElementById('contractor') ? document.getElementById('contractor').value : '';
+  var tbody = document.getElementById('field-force-body');
+  if (!tbody) return;
+  var firstRow = tbody.querySelector('tr');
+  if (!firstRow) return;
+  var nameInput = firstRow.querySelector('input[type="text"]');
+  if (nameInput) nameInput.value = name;
+}
+
 function initEng()  { const b=document.getElementById('engineer-body'); b.innerHTML=''; b.appendChild(makeSimpleRow(['time','time','text','text'],['','','Name','Duties'])); }
 function initWork() { const b=document.getElementById('work-body'); b.innerHTML=''; b.appendChild(makeSimpleRow(['text','text','text','text'],['Work item','Location','Amount','Remarks'])); b.appendChild(makeSimpleRow(['text','text','text','text'],['Work item','Location','Amount','Remarks'])); }
 function initTables(){ initFF(false); initEng(); initWork(); }
