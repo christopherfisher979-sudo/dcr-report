@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DCR Report">
+<meta name="theme-color" content="#0C447C">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Daily Construction Report</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; padding-bottom: env(safe-area-inset-bottom); }
+.app { max-width: 780px; margin: 0 auto; padding: 1.25rem 1rem; }
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 0.5px solid rgba(0,0,0,0.15); }
+.header-title { font-size: 17px; font-weight: 600; color: #0C447C; }
+.header-sub { font-size: 12px; color: #666; margin-top: 2px; }
+.status-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.badge { font-size: 11px; padding: 3px 8px; border-radius: 8px; font-weight: 500; }
+.badge-info { background: #E6F1FB; color: #185FA5; }
+.badge-success { background: #EAF3DE; color: #3B6D11; }
+.badge-warn { background: #FAEEDA; color: #854F0B; }
+.section { margin-bottom: 1.1rem; }
+.section-title { font-size: 11px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 7px; padding-bottom: 4px; border-bottom: 0.5px solid rgba(0,0,0,0.1); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.field { display: flex; flex-direction: column; gap: 3px; }
+.field label { font-size: 11px; color: #666; font-weight: 500; }
+.field-row { display: flex; align-items: center; gap: 6px; }
+.field input, .field textarea, .field select { font-size: 16px; font-family: inherit; color: #1a1a1a; background: #fff; border: 0.5px solid rgba(0,0,0,0.25); border-radius: 8px; padding: 8px 10px; width: 100%; -webkit-appearance: none; }
+.field input:focus, .field textarea:focus { outline: none; border-color: #0C447C; }
+.field input[readonly] { background: #f5f5f3; color: #555; }
+.field textarea { resize: vertical; min-height: 64px; }
+.mic-btn { min-width: 36px; height: 36px; border-radius: 50%; border: 0.5px solid rgba(0,0,0,0.2); background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+.mic-btn.active { background: #FEE2E2; border-color: #E24B4A; }
+.mic-icon { width: 14px; height: 14px; }
+.auto-field input { background: #EAF3DE; border-color: #97C459; color: #3B6D11; font-size: 15px; }
+.days-display { background: #fff; border: 0.5px solid rgba(0,0,0,0.1); border-radius: 10px; padding: 10px 12px; display: flex; gap: 16px; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+.days-stat { text-align: center; min-width: 60px; }
+.days-stat .num { font-size: 24px; font-weight: 600; color: #0C447C; }
+.days-stat .lbl { font-size: 10px; color: #888; }
+.days-divider { width: 0.5px; background: rgba(0,0,0,0.1); height: 36px; }
+.table-wrapper { border: 0.5px solid rgba(0,0,0,0.12); border-radius: 8px; overflow-x: auto; margin-bottom: 6px; }
+.form-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; min-width: 400px; }
+.form-table th { background: #f5f5f3; font-weight: 500; font-size: 10px; color: #666; padding: 6px 8px; text-align: left; border-bottom: 0.5px solid rgba(0,0,0,0.1); white-space: nowrap; }
+.form-table td { padding: 3px 5px; border-bottom: 0.5px solid rgba(0,0,0,0.07); vertical-align: middle; }
+.form-table tr:last-child td { border-bottom: none; }
+.form-table input { border: none; background: transparent; font-size: 14px; width: 100%; padding: 4px; font-family: inherit; color: #1a1a1a; -webkit-appearance: none; }
+.form-table input:focus { outline: 1px solid #0C447C; border-radius: 3px; }
+.form-table select { border: none; background: transparent; font-size: 13px; width: 100%; padding: 4px; font-family: inherit; color: #1a1a1a; -webkit-appearance: none; }
+.add-row-btn { font-size: 13px; color: #185FA5; cursor: pointer; background: none; border: none; padding: 5px 0; font-family: inherit; -webkit-tap-highlight-color: transparent; }
+.actions { display: flex; gap: 8px; margin-top: 1.25rem; padding-top: 1rem; border-top: 0.5px solid rgba(0,0,0,0.1); flex-wrap: wrap; }
+.btn { padding: 11px 16px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; border: 0.5px solid rgba(0,0,0,0.2); background: #fff; color: #1a1a1a; font-family: inherit; -webkit-tap-highlight-color: transparent; }
+.btn-primary { background: #0C447C; color: #fff; border-color: #0C447C; }
+.btn-eod { background: #3C3489; color: #fff; border-color: #3C3489; font-weight: 600; }
+.btn-reset { background: #fff; color: #888; border-color: rgba(0,0,0,0.15); margin-left: auto; }
+.btn:disabled { opacity: 0.4; }
+.sig-area { border: 0.5px solid rgba(0,0,0,0.2); border-radius: 8px; cursor: crosshair; display: block; background: #fff; width: 100%; touch-action: none; }
+.sig-controls { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
+.voice-hint { font-size: 11px; color: #888; }
+.listening-pill { display: none; background: #FEE2E2; color: #A32D2D; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+.listening-pill.show { display: inline-block; }
+.toast { position: fixed; bottom: calc(24px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%) translateY(80px); background: #1a1a1a; color: #fff; border-radius: 20px; padding: 10px 20px; font-size: 13px; white-space: nowrap; z-index: 999; transition: transform 0.25s; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+.save-indicator { font-size: 10px; color: #aaa; text-align: right; margin-bottom: 4px; }
+.voice-ts { font-size: 10px; color: #185FA5; margin-top: 2px; display: none; }
+.voice-ts.show { display: block; }
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 8px; }
+.photo-thumb { position: relative; border-radius: 8px; overflow: hidden; border: 0.5px solid rgba(0,0,0,0.12); background: #f5f5f3; aspect-ratio: 4/3; }
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-thumb .photo-caption { font-size: 10px; padding: 3px 6px; background: rgba(0,0,0,0.55); color: #fff; position: absolute; bottom: 0; left: 0; right: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.photo-thumb .photo-del { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,0.5); color: #fff; border: none; cursor: pointer; font-size: 12px; line-height: 20px; text-align: center; padding: 0; }
+.photo-count { font-size: 11px; color: #888; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <div class="header-title">Robert Peccia &amp; Associates</div>
+      <div class="header-sub">Daily Construction Report</div>
+    </div>
+    <div class="status-bar">
+      <span id="lock-badge" class="badge badge-info">Unlocked</span>
+      <span id="weather-badge" class="badge badge-warn">Weather...</span>
+    </div>
+  </div>
+
+  <div class="save-indicator" id="save-indicator">Auto-saving...</div>
+
+  <div id="form-body">
+    <div class="days-display">
+      <div class="days-stat"><div class="num" id="days-expended">&#8212;</div><div class="lbl">Days expended</div></div>
+      <div class="days-divider"></div>
+      <div class="days-stat"><div class="num" id="days-remaining">&#8212;</div><div class="lbl">Days remaining</div></div>
+      <div style="font-size:11px;color:#aaa;flex:1;text-align:right;">Set contract start &amp; length</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Project Information</div>
+      <div class="grid-2" style="margin-bottom:8px;">
+        <div class="field"><label>Contract Start Date</label><input type="date" id="contract-start" onchange="calcDays();saveData();"></div>
+        <div class="field auto-field"><label>Today's Date</label><input type="date" id="today-date" onchange="calcDays();saveData();"></div>
+      </div>
+      <div class="grid-2" style="margin-bottom:8px;">
+        <div class="field"><label>Contract Length (days)</label><input type="number" id="contract-length" placeholder="e.g. 120" min="1" oninput="calcDays();saveData();"></div>
+        <div class="field"><label>&nbsp;</label><div style="height:44px;"></div></div>
+      </div>
+      <div class="grid-2" style="margin-bottom:8px;">
+        <div class="field"><label>Project</label><div class="field-row"><input type="text" id="project" placeholder="Project name" oninput="saveData()"><button class="mic-btn" onclick="startVoice('project',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+        <div class="field"><label>Project No.</label><div class="field-row"><input type="text" id="project-no" placeholder="Project number" oninput="saveData()"><button class="mic-btn" onclick="startVoice('project-no',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+      </div>
+      <div class="grid-2" style="margin-bottom:8px;">
+        <div class="field"><label>Client</label><div class="field-row"><input type="text" id="client" placeholder="Client name" oninput="saveData()"><button class="mic-btn" onclick="startVoice('client',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+        <div class="field"><label>Contractor</label><div class="field-row"><input type="text" id="contractor" placeholder="Contractor name" oninput="saveData()"><button class="mic-btn" onclick="startVoice('contractor',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+      </div>
+      <div class="field"><label>Project Manager</label><div class="field-row"><input type="text" id="pm" placeholder="Project manager name" oninput="saveData()"><button class="mic-btn" onclick="startVoice('pm',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Weather <span style="font-size:10px;color:#3B6D11;font-weight:400;">(auto-filled via GPS)</span></div>
+      <div class="grid-4">
+        <div class="field auto-field"><label>Weather</label><input type="text" id="weather" placeholder="Loading..." readonly></div>
+        <div class="field auto-field"><label>Temp (low)</label><input type="text" id="temp-min" placeholder="Loading..." readonly></div>
+        <div class="field auto-field"><label>Precipitation</label><input type="text" id="precipitation" placeholder="Loading..." readonly></div>
+        <div class="field auto-field"><label>Temp (current)</label><input type="text" id="temperature" placeholder="Loading..." readonly></div>
+        <div class="field auto-field"><label>Wind</label><input type="text" id="wind" placeholder="Loading..." readonly></div>
+        <div class="field auto-field"><label>Temp (high)</label><input type="text" id="temp-max" placeholder="Loading..." readonly></div>
+      </div>
+      <div style="font-size:10px;color:#aaa;margin-top:4px;" id="weather-location"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Average Field Force</div>
+      <div class="table-wrapper"><table class="form-table"><thead><tr><th style="width:35%;">Contractor</th><th style="width:20%;">Prime/Sub</th><th style="width:15%;">Men</th><th style="width:30%;">Remarks</th></tr></thead><tbody id="field-force-body"></tbody></table></div>
+      <button class="add-row-btn" onclick="addFFRow()">+ Add row</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Engineer's Personnel</div>
+      <div class="table-wrapper"><table class="form-table"><thead><tr><th style="width:22%;">Time AM</th><th style="width:22%;">Time PM</th><th style="width:28%;">Name</th><th style="width:28%;">Duties</th></tr></thead><tbody id="engineer-body"></tbody></table></div>
+      <button class="add-row-btn" onclick="addEngRow()">+ Add row</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Equipment at the Site</div>
+      <div class="field"><div class="field-row"><textarea id="equipment" placeholder="List equipment at the site..." oninput="saveData()"></textarea><button class="mic-btn" onclick="startVoice('equipment',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Construction Activities</div>
+      <div class="field"><div class="field-row"><textarea id="activities" placeholder="Describe today's construction activities..." style="min-height:80px;" oninput="saveData()"></textarea><button class="mic-btn" onclick="startVoice('activities',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+      <div style="margin-top:10px;">
+        <div style="font-size:11px;font-weight:500;color:#666;margin-bottom:6px;">Items of Work Completed</div>
+        <div class="table-wrapper"><table class="form-table"><thead><tr><th style="width:24%;">Item</th><th style="width:36%;">Location</th><th style="width:15%;">Amount</th><th style="width:25%;">Remarks</th></tr></thead><tbody id="work-body"></tbody></table></div>
+        <button class="add-row-btn" onclick="addWorkRow()">+ Add row</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Remarks</div>
+      <div class="field"><div class="field-row"><textarea id="remarks" placeholder="Any additional remarks..." style="min-height:80px;" oninput="saveData()"></textarea><button class="mic-btn" onclick="startVoice('remarks',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Resident Inspector</div>
+      <div class="grid-2">
+        <div class="field"><label>Inspector Name</label><div class="field-row"><input type="text" id="inspector" placeholder="Inspector name" oninput="saveData()"><button class="mic-btn" onclick="startVoice('inspector',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+        <div class="field"><label>Title</label><div class="field-row"><input type="text" id="inspector-title" placeholder="Title" oninput="saveData()"><button class="mic-btn" onclick="startVoice('inspector-title',this)"><svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Daily Photos</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="takePhoto()" style="font-size:13px;padding:8px 14px;">&#128247; Take Photo</button>
+        <button class="btn" onclick="uploadPhoto()" style="font-size:13px;padding:8px 14px;">&#128193; Choose from Library</button>
+        <span class="photo-count" id="photo-count"></span>
+      </div>
+      <input type="file" id="photo-upload" accept="image/*" style="display:none;" onchange="handlePhotoFile(this)">
+      <input type="file" id="photo-capture" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoFile(this)">
+      <div class="photo-grid" id="photo-grid"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Digital Signature</div>
+      <div style="font-size:12px;color:#666;margin-bottom:6px;">Draw your signature with your finger:</div>
+      <canvas id="sig-canvas" class="sig-area" height="110"></canvas>
+      <div class="sig-controls">
+        <button class="btn" onclick="clearSig()" style="font-size:12px;padding:6px 14px;">Clear</button>
+        <span class="voice-hint" id="sig-status"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" onclick="generatePDF()">Download PDF</button>
+    <button class="btn btn-eod" onclick="endOfDay()" id="eod-btn">&#9654; End of Day</button>
+    <button class="btn btn-reset" onclick="resetForm()">Reset</button>
+  </div>
+
+  <div style="font-size:11px;color:#aaa;margin-top:10px;text-align:center;">
+    <span id="listening-pill" class="listening-pill">&#9679; Listening...</span>
+    <span id="offline-notice" style="display:none;color:#854F0B;">&#9888; Offline &#8212; weather unavailable</span>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+const { jsPDF } = window.jspdf;
+const todayStr = new Date().toISOString().split('T')[0];
+const PERSIST_KEYS = ['project','project-no','client','contractor','pm','contract-start','contract-length','inspector','inspector-title'];
+const DAILY_KEYS   = ['today-date','equipment','activities','remarks'];
+
+// ── Save / Load ────────────────────────────────────────────────
+function saveData() {
+  const data = {};
+  [...PERSIST_KEYS,...DAILY_KEYS].forEach(id => { const el=document.getElementById(id); if(el) data[id]=el.value; });
+  data._ff   = getTableData('field-force-body');
+  data._eng  = getTableData('engineer-body');
+  data._work = getTableData('work-body');
+  const blank=document.createElement('canvas'); blank.width=sigCanvas.width; blank.height=sigCanvas.height;
+  const sig=sigCanvas.toDataURL(); data._sig=(sig!==blank.toDataURL())?sig:null;
+  data._photos = photos;
+  try { localStorage.setItem('dcr_data',JSON.stringify(data)); } catch(e){}
+  document.getElementById('save-indicator').textContent='Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+
+function loadData() {
+  let data; try { data=JSON.parse(localStorage.getItem('dcr_data')||'null'); } catch(e){}
+  if(!data){ document.getElementById('today-date').value=todayStr; initTables(); return; }
+  [...PERSIST_KEYS,...DAILY_KEYS].forEach(id=>{ const el=document.getElementById(id); if(el&&data[id]!==undefined) el.value=data[id]; });
+  if(!data['today-date']) document.getElementById('today-date').value=todayStr;
+  if(data._ff&&data._ff.length)   setTableData('field-force-body',data._ff,  ['text','select','number','text']);
+  else initFF();
+  if(data._eng&&data._eng.length)  setTableData('engineer-body',data._eng,   ['time','time','text','text']);
+  else initEng();
+  if(data._work&&data._work.length) setTableData('work-body',data._work,      ['text','text','text','text']);
+  else initWork();
+  if(data._sig){ const img=new Image(); img.onload=()=>sigCtx.drawImage(img,0,0); img.src=data._sig; }
+  if(data._photos&&data._photos.length){ photos=data._photos; renderPhotos(); }
+  calcDays();
+  document.getElementById('save-indicator').textContent='Loaded saved data';
+}
+
+function getTableData(id) {
+  return [...document.getElementById(id).querySelectorAll('tr')].map(tr=>
+    [...tr.querySelectorAll('input,select')].map(el=>el.value));
+}
+
+function setTableData(tbodyId,rows,types) {
+  const tbody=document.getElementById(tbodyId); tbody.innerHTML='';
+  rows.forEach(cells=>{
+    const tr=document.createElement('tr');
+    cells.forEach((val,i)=>{
+      const td=document.createElement('td');
+      if(tbodyId==='field-force-body'&&i===1){ td.appendChild(makeSelect(val)); }
+      else { const inp=document.createElement('input'); inp.type=types[i]; inp.value=val; inp.setAttribute('oninput','saveData()'); td.appendChild(inp); }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Weather (GPS-first, IP fallback) ──────────────────────────
+const wCodes={0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Foggy',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',80:'Showers',81:'Rain showers',82:'Heavy showers',95:'Thunderstorm',99:'Thunderstorm'};
+
+async function fetchWeatherFromCoords(lat,lon) {
+  const url='https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+
+    '&current=temperature_2m,precipitation,windspeed_10m,weathercode'+
+    '&daily=temperature_2m_max,temperature_2m_min'+
+    '&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch&timezone=auto';
+  const data=await (await fetch(url)).json();
+  const c=data.current;
+  const d=data.daily;
+  document.getElementById('weather').value      = wCodes[c.weathercode]||'Fair';
+  document.getElementById('wind').value         = Math.round(c.windspeed_10m)+' mph';
+  document.getElementById('temperature').value  = Math.round(c.temperature_2m)+'\u00b0F';
+  document.getElementById('precipitation').value= c.precipitation>0 ? c.precipitation.toFixed(2)+'"' : 'None';
+  document.getElementById('temp-max').value     = d&&d.temperature_2m_max ? Math.round(d.temperature_2m_max[0])+'\u00b0F' : '—';
+  document.getElementById('temp-min').value     = d&&d.temperature_2m_min ? Math.round(d.temperature_2m_min[0])+'\u00b0F' : '—';
+  document.getElementById('weather-badge').textContent='Weather loaded';
+  document.getElementById('weather-badge').className='badge badge-success';
+}
+
+async function reverseGeocode(lat,lon) {
+  try {
+    const data=await (await fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lon+'&format=json',{headers:{'Accept-Language':'en'}})).json();
+    const addr=data.address||{};
+    const place=addr.city||addr.town||addr.village||addr.county||'Job site';
+    const region=addr.state||'';
+    document.getElementById('weather-location').textContent='\uD83D\uDCCD '+place+(region?', '+region:'')+' (GPS)';
+  } catch(e) {
+    document.getElementById('weather-location').textContent='GPS: '+lat.toFixed(4)+', '+lon.toFixed(4);
+  }
+}
+
+async function fallbackToIP() {
+  try {
+    const geo=await (await fetch('https://ipapi.co/json/')).json();
+    await fetchWeatherFromCoords(geo.latitude,geo.longitude);
+    document.getElementById('weather-location').textContent=geo.city+', '+geo.region+' (IP location)';
+  } catch(e) {
+    document.getElementById('weather-badge').textContent='Weather unavailable';
+    ['weather','wind','temperature','temp-max','temp-min','precipitation'].forEach(id=>{ const el=document.getElementById(id); el.placeholder='Enter manually'; el.removeAttribute('readonly'); });
+  }
+}
+
+async function fetchWeather() {
+  if(!navigator.onLine){ document.getElementById('offline-notice').style.display='inline'; document.getElementById('weather-badge').textContent='Offline'; return; }
+  document.getElementById('weather-badge').textContent='Getting location...';
+  document.getElementById('weather-badge').className='badge badge-warn';
+  if(navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      async(pos)=>{ try{ await fetchWeatherFromCoords(pos.coords.latitude,pos.coords.longitude); await reverseGeocode(pos.coords.latitude,pos.coords.longitude); }catch(e){fallbackToIP();} },
+      ()=>fallbackToIP(),
+      {timeout:8000,maximumAge:300000,enableHighAccuracy:true}
+    );
+  } else { fallbackToIP(); }
+}
+
+// ── Days ───────────────────────────────────────────────────────
+function calcDays() {
+  const s=document.getElementById('contract-start').value;
+  const t=document.getElementById('today-date').value;
+  const len=parseInt(document.getElementById('contract-length').value)||0;
+  if(!s||!t) return;
+  const exp=Math.max(0,Math.floor((new Date(t)-new Date(s))/86400000));
+  document.getElementById('days-expended').textContent=exp;
+  document.getElementById('days-remaining').textContent=len>0?Math.max(0,len-exp):'\u2014';
+}
+
+// ── Voice with per-entry timestamps ───────────────────────────
+let recognition=null,activeBtn=null,activeFieldId=null;
+const voiceLog={};
+
+function addVoiceEntry(fieldId,transcript) {
+  const ts=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(!voiceLog[fieldId]) voiceLog[fieldId]=[];
+  voiceLog[fieldId].push({text:transcript,time:ts});
+  renderVoiceTimestamps(fieldId);
+}
+
+function renderVoiceTimestamps(fieldId) {
+  const el=document.getElementById(fieldId); if(!el) return;
+  const parent=el.closest('.field')||el.parentElement;
+  let tsEl=parent.querySelector('.voice-ts');
+  if(!tsEl){ tsEl=document.createElement('div'); tsEl.className='voice-ts show'; parent.appendChild(tsEl); }
+  const entries=voiceLog[fieldId]||[];
+  tsEl.innerHTML=entries.map(e=>'<span style="display:block;margin-bottom:1px;">&#127908; <strong>'+e.time+'</strong> \u2014 <span style="color:#444;">'+e.text+'</span></span>').join('');
+}
+
+function startVoice(fieldId,btn) {
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ showToast('Voice not supported in this browser'); return; }
+  if(recognition){ recognition.stop(); return; }
+  recognition=new SR(); recognition.continuous=false; recognition.interimResults=true; recognition.lang='en-US';
+  activeBtn=btn; activeFieldId=fieldId; btn.classList.add('active');
+  document.getElementById('listening-pill').classList.add('show');
+  let finalTranscript='';
+  recognition.onresult=e=>{
+    finalTranscript=''; let interim='';
+    for(let i=0;i<e.results.length;i++){ if(e.results[i].isFinal) finalTranscript+=e.results[i][0].transcript; else interim+=e.results[i][0].transcript; }
+    const el=document.getElementById(fieldId);
+    if(el&&el.tagName==='TEXTAREA'){ const existing=el.value.trim(); el.value=existing?existing+'\n'+(finalTranscript||interim):(finalTranscript||interim); }
+    else if(el){ el.value=finalTranscript||interim; }
+    saveData();
+  };
+  recognition.onend=()=>{
+    if(activeBtn) activeBtn.classList.remove('active');
+    const el=document.getElementById(activeFieldId);
+    if(el&&finalTranscript) addVoiceEntry(activeFieldId,finalTranscript);
+    recognition=null; activeBtn=null; activeFieldId=null; finalTranscript='';
+    document.getElementById('listening-pill').classList.remove('show');
+  };
+  recognition.onerror=e=>{ showToast('Voice error: '+e.error); if(activeBtn) activeBtn.classList.remove('active'); recognition=null; activeBtn=null; activeFieldId=null; document.getElementById('listening-pill').classList.remove('show'); };
+  recognition.start();
+}
+
+// ── Table helpers ──────────────────────────────────────────────
+function makeSelect(val) {
+  const sel=document.createElement('select'); sel.setAttribute('onchange','saveData()');
+  sel.style.cssText='font-size:13px;padding:4px;border:none;background:transparent;width:100%;color:#1a1a1a;';
+  [['','&#8212;'],['Prime','Prime'],['Subcontractor','Subcontractor']].forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.innerHTML=t; if(v===val) o.selected=true; sel.appendChild(o); });
+  return sel;
+}
+function makeFFRow() {
+  const tr=document.createElement('tr');
+  [{type:'text',ph:'Name'},{type:'select'},{type:'number',ph:'0'},{type:'text',ph:'Remarks'}].forEach(col=>{
+    const td=document.createElement('td');
+    if(col.type==='select'){ td.appendChild(makeSelect('')); }
+    else { const inp=document.createElement('input'); inp.type=col.type; inp.placeholder=col.ph||''; if(col.type==='number') inp.min='0'; inp.setAttribute('oninput','saveData()'); td.appendChild(inp); }
+    tr.appendChild(td);
+  });
+  return tr;
+}
+function makeSimpleRow(types,phs) {
+  const tr=document.createElement('tr');
+  types.forEach((t,i)=>{ const td=document.createElement('td'); const inp=document.createElement('input'); inp.type=t; inp.placeholder=phs[i]||''; inp.setAttribute('oninput','saveData()'); td.appendChild(inp); tr.appendChild(td); });
+  return tr;
+}
+function initFF(keepFirst) {
+  const b=document.getElementById('field-force-body');
+  // Save first row values if keepFirst is true
+  let firstName='', firstSel='Prime', firstMen='', firstRemarks='';
+  if(keepFirst) {
+    const firstRow=b.querySelector('tr');
+    if(firstRow) {
+      const cells=[...firstRow.querySelectorAll('input,select')];
+      firstName   = cells[0]?cells[0].value:'';
+      firstSel    = cells[1]?cells[1].value:'Prime';
+      firstMen    = cells[2]?cells[2].value:'';
+      firstRemarks= cells[3]?cells[3].value:'';
+    }
+  }
+  b.innerHTML='';
+  // First row — prime contractor
+  const r1=makeFFRow();
+  const c1=[...r1.querySelectorAll('input,select')];
+  c1[0].value = firstName || 'Contractor Name';
+  c1[1].value = firstSel || 'Prime';
+  // set the select option
+  [...c1[1].options].forEach(o=>{ o.selected = (o.value===(firstSel||'Prime')); });
+  if(firstMen) c1[2].value=firstMen;
+  if(firstRemarks) c1[3].value=firstRemarks;
+  b.appendChild(r1);
+  // Second row blank
+  b.appendChild(makeFFRow());
+}
+function initEng()  { const b=document.getElementById('engineer-body'); b.innerHTML=''; b.appendChild(makeSimpleRow(['time','time','text','text'],['','','Name','Duties'])); }
+function initWork() { const b=document.getElementById('work-body'); b.innerHTML=''; b.appendChild(makeSimpleRow(['text','text','text','text'],['Work item','Location','Amount','Remarks'])); b.appendChild(makeSimpleRow(['text','text','text','text'],['Work item','Location','Amount','Remarks'])); }
+function initTables(){ initFF(false); initEng(); initWork(); }
+function addFFRow()   { document.getElementById('field-force-body').appendChild(makeFFRow()); }
+function addEngRow()  { document.getElementById('engineer-body').appendChild(makeSimpleRow(['time','time','text','text'],['','','Name','Duties'])); }
+function addWorkRow() { document.getElementById('work-body').appendChild(makeSimpleRow(['text','text','text','text'],['Work item','Location','Amount','Remarks'])); }
+
+// ── Signature ──────────────────────────────────────────────────
+const sigCanvas=document.getElementById('sig-canvas');
+const sigCtx=sigCanvas.getContext('2d');
+let drawing=false;
+sigCtx.strokeStyle='#1a1a1a'; sigCtx.lineWidth=2.5; sigCtx.lineCap='round'; sigCtx.lineJoin='round';
+function getPos(e,c){ const r=c.getBoundingClientRect(); const s=e.touches?e.touches[0]:e; return{x:s.clientX-r.left,y:s.clientY-r.top}; }
+sigCanvas.addEventListener('mousedown', e=>{drawing=true;sigCtx.beginPath();const p=getPos(e,sigCanvas);sigCtx.moveTo(p.x,p.y);});
+sigCanvas.addEventListener('mousemove', e=>{if(!drawing)return;const p=getPos(e,sigCanvas);sigCtx.lineTo(p.x,p.y);sigCtx.stroke();});
+sigCanvas.addEventListener('mouseup',   ()=>{drawing=false;saveData();});
+sigCanvas.addEventListener('mouseleave',()=>{if(drawing){drawing=false;saveData();}});
+sigCanvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;sigCtx.beginPath();const p=getPos(e,sigCanvas);sigCtx.moveTo(p.x,p.y);},{passive:false});
+sigCanvas.addEventListener('touchmove', e=>{e.preventDefault();if(!drawing)return;const p=getPos(e,sigCanvas);sigCtx.lineTo(p.x,p.y);sigCtx.stroke();},{passive:false});
+sigCanvas.addEventListener('touchend',  ()=>{drawing=false;saveData();});
+function clearSig(){ sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height); saveData(); }
+function isSigBlank(){ const b=document.createElement('canvas'); b.width=sigCanvas.width; b.height=sigCanvas.height; return sigCanvas.toDataURL()===b.toDataURL(); }
+
+// ── Toast ──────────────────────────────────────────────────────
+function showToast(msg,duration=3000){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),duration); }
+
+// ── Lock ───────────────────────────────────────────────────────
+let locked=false;
+function signAndLock() {
+  locked=true;
+  document.querySelectorAll('input,textarea,select').forEach(el=>el.disabled=true);
+  document.querySelectorAll('.mic-btn,.add-row-btn').forEach(el=>el.disabled=true);
+  sigCanvas.style.pointerEvents='none';
+  document.getElementById('lock-badge').textContent='Locked';
+  document.getElementById('lock-badge').className='badge badge-success';
+  document.getElementById('sig-status').textContent='Signed '+new Date().toLocaleString();
+}
+
+// ── PDF ────────────────────────────────────────────────────────
+function generatePDF() {
+  const doc=new jsPDF({orientation:'portrait',unit:'pt',format:'letter'});
+  const W=612,M=40; let y=M;
+  const gv=id=>document.getElementById(id)?.value||'';
+  const ln=()=>{ doc.setDrawColor(180); doc.setLineWidth(0.5); doc.line(M,y,W-M,y); y+=8; };
+  doc.setFillColor(12,68,124); doc.rect(M,y,W-2*M,34,'F');
+  doc.setFontSize(13); doc.setTextColor(255); doc.setFont(undefined,'bold');
+  doc.text('ROBERT PECCIA & ASSOCIATES',M+8,y+15);
+  doc.setFontSize(9); doc.setFont(undefined,'normal');
+  doc.text('DAILY CONSTRUCTION REPORT',M+8,y+28);
+  const exp=document.getElementById('days-expended').textContent;
+  const rem=document.getElementById('days-remaining').textContent;
+  doc.setFontSize(8); doc.setTextColor(220);
+  doc.text('Expended: '+exp+'  Remaining: '+rem,W-M-150,y+22);
+  y+=46;
+  const rows=[
+    ['Contract Start',gv('contract-start'),"Today's Date",gv('today-date')],
+    ['Contract Length',gv('contract-length')+' days','Days Remaining',rem],
+    ['Project',gv('project'),'Project No.',gv('project-no')],
+    ['Client',gv('client'),'Contractor',gv('contractor')],
+    ['Project Manager',gv('pm'),'',''],
+  ];
+  rows.forEach(([l1,v1,l2,v2])=>{
+    doc.setFontSize(8); doc.setTextColor(110); doc.setFont(undefined,'normal'); doc.text(l1+':',M,y+9);
+    doc.setFontSize(10); doc.setTextColor(20); doc.text(v1,M+90,y+9,{maxWidth:155});
+    if(l2){ doc.setFontSize(8); doc.setTextColor(110); doc.text(l2+':',M+265,y+9); doc.setFontSize(10); doc.setTextColor(20); doc.text(v2,M+355,y+9,{maxWidth:155}); }
+    y+=19;
+  });
+  ln();
+  doc.setFontSize(9); doc.setFont(undefined,'bold'); doc.setTextColor(50); doc.text('Weather Conditions',M,y+9); y+=16;
+  doc.setFont(undefined,'normal');
+  let wx=M;
+  [['Weather',gv('weather')],['Temp (low)',gv('temp-min')],['Precip.',gv('precipitation')],['Temp (now)',gv('temperature')],['Wind',gv('wind')],['Temp (high)',gv('temp-max')]].forEach(([l,v])=>{
+    doc.setFontSize(8); doc.setTextColor(110); doc.text(l+':',wx,y+9);
+    doc.setFontSize(9); doc.setTextColor(20); doc.text(v,wx+42,y+9,{maxWidth:70}); wx+=88;
+  });
+  const loc=document.getElementById('weather-location').textContent;
+  if(loc){ doc.setFontSize(7); doc.setTextColor(150); doc.text(loc,M,y+20); }
+  y+=26; ln();
+  const sect=(title,text)=>{
+    doc.setFontSize(9); doc.setFont(undefined,'bold'); doc.setTextColor(50); doc.text(title,M,y+9); y+=16;
+    if(text){ doc.setFont(undefined,'normal'); doc.setTextColor(20); doc.setFontSize(9); const lines=doc.splitTextToSize(text,W-2*M); doc.text(lines,M,y+8); y+=lines.length*12+6; }
+    else{ y+=14; } ln();
+  };
+  sect('Equipment at the Site',gv('equipment'));
+  sect('Construction Activities',gv('activities'));
+  sect('Remarks',gv('remarks'));
+  doc.setFontSize(9); doc.setFont(undefined,'bold'); doc.setTextColor(50);
+  doc.text('Inspector:',M,y+9); doc.setFont(undefined,'normal'); doc.setTextColor(20);
+  doc.text(gv('inspector')+'   |   Title: '+gv('inspector-title'),M+50,y+9); y+=22;
+  if(!isSigBlank()){
+    doc.addImage(sigCanvas.toDataURL('image/png'),'PNG',M,y,200,55);
+    doc.line(M,y+60,M+200,y+60);
+    doc.setFontSize(8); doc.setTextColor(110); doc.text('Digital Signature',M,y+70);
+    if(locked) doc.text('Signed & Locked: '+new Date().toLocaleString(),M+115,y+70);
+  }
+  doc.setFontSize(7); doc.setTextColor(160);
+  doc.text('RPA Daily Construction Report  |  '+new Date().toLocaleString(),M,780);
+
+  // Add photo pages
+  if(photos.length>0){
+    photos.forEach((p,i)=>{
+      doc.addPage();
+      doc.setFillColor(12,68,124); doc.rect(M,40,W-2*M,24,'F');
+      doc.setFontSize(10); doc.setTextColor(255); doc.setFont(undefined,'bold');
+      doc.text('DAILY PHOTOS — '+gv('today-date'),M+8,40+16);
+      doc.setFontSize(8); doc.setFont(undefined,'normal');
+      doc.text('Photo '+(i+1)+' of '+photos.length,W-M-60,40+16);
+      // Fit image to page width
+      const imgW=W-2*M, imgH=imgW*0.75;
+      doc.addImage(p.dataUrl,'JPEG',M,80,imgW,imgH);
+      // Timestamp + caption
+      doc.setFontSize(8); doc.setTextColor(80);
+      doc.text(p.timestamp+(p.caption?' — '+p.caption:''),M,80+imgH+14);
+      doc.setFontSize(7); doc.setTextColor(160);
+      doc.text('RPA Daily Construction Report  |  '+new Date().toLocaleString(),M,780);
+    });
+  }
+
+  doc.save('DCR_'+(gv('today-date')||todayStr)+'.pdf');
+  showToast('PDF downloaded!');
+}
+
+// ── Photos ────────────────────────────────────────────────────
+let photos = []; // [{dataUrl, caption, timestamp}]
+
+function takePhoto() {
+  document.getElementById('photo-capture').value = '';
+  document.getElementById('photo-capture').click();
+}
+function uploadPhoto() {
+  document.getElementById('photo-upload').value = '';
+  document.getElementById('photo-upload').click();
+}
+
+function handlePhotoFile(input) {
+  const files = [...input.files];
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const ts = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      photos.push({ dataUrl: e.target.result, caption: '', timestamp: ts });
+      renderPhotos();
+      saveData();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPhotos() {
+  const grid = document.getElementById('photo-grid');
+  const count = document.getElementById('photo-count');
+  grid.innerHTML = '';
+  photos.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    const img = document.createElement('img');
+    img.src = p.dataUrl;
+    const cap = document.createElement('div');
+    cap.className = 'photo-caption';
+    cap.textContent = p.timestamp + (p.caption ? ' — ' + p.caption : '');
+    const del = document.createElement('button');
+    del.className = 'photo-del';
+    del.textContent = '×';
+    del.onclick = () => { photos.splice(i,1); renderPhotos(); saveData(); };
+    div.appendChild(img); div.appendChild(cap); div.appendChild(del);
+    // Tap caption to edit
+    cap.onclick = () => {
+      const txt = prompt('Add a caption for this photo:', p.caption||'');
+      if(txt !== null){ photos[i].caption = txt; renderPhotos(); saveData(); }
+    };
+    grid.appendChild(div);
+  });
+  count.textContent = photos.length > 0 ? photos.length + ' photo' + (photos.length>1?'s':'') + ' — tap caption to edit' : '';
+}
+
+function clearPhotos() { photos = []; renderPhotos(); }
+
+// ── Reset ──────────────────────────────────────────────────────
+function resetForm() {
+  if(locked){ showToast('Report is locked.'); return; }
+  if(!confirm('Reset daily fields? Project info will be kept.')) return;
+  DAILY_KEYS.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('today-date').value=todayStr;
+  clearPhotos(); initTables(); clearSig(); calcDays(); fetchWeather(); saveData();
+}
+
+function hardReset() {
+  const saved={};
+  PERSIST_KEYS.forEach(id=>{ const el=document.getElementById(id); if(el) saved[id]=el.value; });
+  locked=false;
+  document.querySelectorAll('input,textarea,select').forEach(el=>{ el.disabled=false; el.value=''; });
+  document.querySelectorAll('.mic-btn,.add-row-btn').forEach(el=>el.disabled=false);
+  sigCanvas.style.pointerEvents='';
+  document.getElementById('lock-badge').textContent='Unlocked';
+  document.getElementById('lock-badge').className='badge badge-info';
+  document.getElementById('eod-btn').disabled=false;
+  document.getElementById('sig-status').textContent='';
+  document.getElementById('today-date').value=new Date().toISOString().split('T')[0];
+  PERSIST_KEYS.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=saved[id]||''; });
+  clearPhotos(); initFF(true); initEng(); initWork(); clearSig(); calcDays(); fetchWeather(); saveData();
+}
+
+async function endOfDay() {
+  if(locked){ showToast('Already locked.'); return; }
+  if(isSigBlank()){ showToast('Please draw your signature first.'); return; }
+  if(!confirm('This will:\n1. Sign & lock the report\n2. Download the PDF\n3. Reset for tomorrow\n\nContinue?')) return;
+  signAndLock();
+  await new Promise(r=>setTimeout(r,300));
+  generatePDF();
+  await new Promise(r=>setTimeout(r,900));
+  hardReset();
+  showToast('Done! Ready for tomorrow.',4000);
+}
+
+// ── Init ───────────────────────────────────────────────────────
+window.addEventListener('load',()=>{
+  sigCanvas.width=sigCanvas.offsetWidth;
+  loadData();
+  fetchWeather();
+  if(!navigator.onLine) document.getElementById('offline-notice').style.display='inline';
+  window.addEventListener('online', ()=>{ document.getElementById('offline-notice').style.display='none'; fetchWeather(); });
+  window.addEventListener('offline',()=>{ document.getElementById('offline-notice').style.display='inline'; });
+});
+</script>
+</body>
+</html>
